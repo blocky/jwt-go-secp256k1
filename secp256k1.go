@@ -9,11 +9,13 @@ package secp256k1
 import (
 	"crypto"
 	"crypto/ecdsa"
+	"encoding/base64"
 	"errors"
 	"math/big"
+	"strings"
 
-	"github.com/dgrijalva/jwt-go"
-	ecrypto "github.com/ethereum/go-ethereum/crypto"
+	"github.com/dustinxie/ecc"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // ES256K and ES256K-R algorithms. uPort uses SigningMethodES256KR.
@@ -76,7 +78,11 @@ var (
 //
 // Verify it is a secp256k1 key before passing, otherwise it will validate with
 // that type of key instead. This can be done using ethereum's crypto package.
-func (sm *SigningMethodSecp256k1) Verify(signingString, signature string, key interface{}) error {
+func (sm *SigningMethodSecp256k1) Verify(
+	signingString string,
+	signature []byte,
+	key interface{},
+) error {
 	pub, ok := key.(*ecdsa.PublicKey)
 	if !ok {
 		return ErrWrongKeyFormat
@@ -88,7 +94,7 @@ func (sm *SigningMethodSecp256k1) Verify(signingString, signature string, key in
 	hasher := sm.hash.New()
 	hasher.Write([]byte(signingString))
 
-	sig, err := jwt.DecodeSegment(signature)
+	sig, err := DecodeSegment(string(signature))
 	if err != nil {
 		return err
 	}
@@ -106,27 +112,48 @@ func (sm *SigningMethodSecp256k1) Verify(signingString, signature string, key in
 	return nil
 }
 
+// Decode JWT specific base64url encoding with padding stripped
+func DecodeSegment(seg string) ([]byte, error) {
+	if l := len(seg) % 4; l > 0 {
+		seg += strings.Repeat("=", 4-l)
+	}
+
+	return base64.URLEncoding.DecodeString(seg)
+}
+
 // Sign produces a secp256k1 signature for a JWT. The type of key has
 // to be *PrivateKey.
-func (sm *SigningMethodSecp256k1) Sign(signingString string, key interface{}) (string, error) {
+func (sm *SigningMethodSecp256k1) Sign(
+	signingString string,
+	key interface{},
+) (
+	[]byte,
+	error,
+) {
 	prv, ok := key.(*ecdsa.PrivateKey)
 	if !ok {
-		return "", ErrWrongKeyFormat
+		return []byte{}, ErrWrongKeyFormat
 	}
 
 	if !sm.hash.Available() {
-		return "", ErrHashUnavailable
+		return []byte{}, ErrHashUnavailable
 	}
 	hasher := sm.hash.New()
 	hasher.Write([]byte(signingString))
 
-	sig, err := ecrypto.Sign(hasher.Sum(nil), prv)
+	sig, err := ecc.SignEthereum(hasher.Sum(nil), prv)
 	if err != nil {
-		return "", ErrFailedSigning
+		return []byte{}, ErrFailedSigning
 	}
 	out := sm.toOutSig(sig)
 
-	return jwt.EncodeSegment(out), nil
+	return EncodeSegment(out), nil
+}
+
+// Encode JWT specific base64url encoding with padding stripped
+func EncodeSegment(seg []byte) []byte {
+	str := strings.TrimRight(base64.URLEncoding.EncodeToString(seg), "=")
+	return []byte(str)
 }
 
 // Alg returns the algorithm name.
