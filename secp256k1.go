@@ -7,15 +7,15 @@
 package secp256k1
 
 import (
-	"crypto"
 	"crypto/ecdsa"
 	"encoding/base64"
 	"errors"
-	"math/big"
+	"hash"
 	"strings"
 
 	"github.com/dustinxie/ecc"
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/sha3"
 )
 
 // ES256K and ES256K-R algorithms. uPort uses SigningMethodES256KR.
@@ -33,7 +33,7 @@ var (
 // SigningMethodSecp256k1 is the implementation of jwt.SigningMethod.
 type SigningMethodSecp256k1 struct {
 	alg      string
-	hash     crypto.Hash
+	hash     hash.Hash
 	toOutSig toOutSig
 	sigLen   int
 }
@@ -45,7 +45,7 @@ type toOutSig func(sig []byte) []byte
 func init() {
 	SigningMethodES256K = &SigningMethodSecp256k1{
 		alg:      "ES256K",
-		hash:     crypto.SHA256,
+		hash:     sha3.NewLegacyKeccak256(),
 		toOutSig: toES256K, // R || S
 		sigLen:   64,
 	}
@@ -55,7 +55,7 @@ func init() {
 
 	SigningMethodES256KR = &SigningMethodSecp256k1{
 		alg:      "ES256K-R",
-		hash:     crypto.SHA256,
+		hash:     sha3.NewLegacyKeccak256(),
 		toOutSig: toES256KR, // R || S || V
 		sigLen:   65,
 	}
@@ -88,11 +88,12 @@ func (sm *SigningMethodSecp256k1) Verify(
 		return ErrWrongKeyFormat
 	}
 
-	if !sm.hash.Available() {
+	sm.hash.Reset()
+	_, err := sm.hash.Write([]byte(signingString))
+	if err != nil {
 		return ErrHashUnavailable
 	}
-	hasher := sm.hash.New()
-	hasher.Write([]byte(signingString))
+	sum := sm.hash.Sum(nil)
 
 	sig, err := DecodeSegment(string(signature))
 	if err != nil {
@@ -102,10 +103,9 @@ func (sm *SigningMethodSecp256k1) Verify(
 		return ErrBadSignature
 	}
 
-	bir := new(big.Int).SetBytes(sig[:32])   // R
-	bis := new(big.Int).SetBytes(sig[32:64]) // S
-
-	if !ecdsa.Verify(pub, hasher.Sum(nil), bir, bis) {
+	pubKeyBytes := ecc.MarshalCompressed(pub.Curve, pub.X, pub.Y)
+	out := sm.toOutSig(sig)
+	if !ecc.VerifyEthereum(pubKeyBytes, sum, out, true) {
 		return ErrVerification
 	}
 
@@ -135,13 +135,14 @@ func (sm *SigningMethodSecp256k1) Sign(
 		return []byte{}, ErrWrongKeyFormat
 	}
 
-	if !sm.hash.Available() {
+	sm.hash.Reset()
+	_, err := sm.hash.Write([]byte(signingString))
+	if err != nil {
 		return []byte{}, ErrHashUnavailable
 	}
-	hasher := sm.hash.New()
-	hasher.Write([]byte(signingString))
+	sum := sm.hash.Sum(nil)
 
-	sig, err := ecc.SignEthereum(hasher.Sum(nil), prv)
+	sig, err := ecc.SignEthereum(sum, prv)
 	if err != nil {
 		return []byte{}, ErrFailedSigning
 	}
