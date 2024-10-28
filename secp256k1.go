@@ -107,17 +107,9 @@ func (sm *SigningMethodSecp256k1) Verify(
 	}
 	sum := sm.hash.Sum(nil)
 
-	sig, err := DecodeSegment(string(signature))
-	if err != nil {
-		return err
-	}
-	if len(sig) != sm.sigLen {
-		return ErrBadSignature
-	}
-
 	pubKeyBytes := ecc.MarshalCompressed(pub.Curve, pub.X, pub.Y)
-	out := sm.toOutSig(sig)
-	if !ecc.VerifyEthereum(pubKeyBytes, sum, out, true) {
+	// out := sm.toOutSig(sig)
+	if !ecc.VerifyEthereum(pubKeyBytes, sum, signature[:64], true) {
 		return ErrVerification
 	}
 
@@ -162,17 +154,7 @@ func (sm *SigningMethodSecp256k1) Sign(
 
 	slog.Info(fmt.Sprintf("sig sign %s", (out)))
 
-	// todo: We encode here as base64 and then in token.go it gets encoded as
-	// base64 again - we should remove this encoding, but then also test in
-	// verify that it doesn't decode twice!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	return EncodeSegment(out), nil
-}
-
-// Encode JWT specific base64url encoding with padding stripped
-func EncodeSegment(seg []byte) []byte {
-	str := strings.TrimRight(base64.URLEncoding.EncodeToString(seg), "=")
-
-	return []byte(str)
+	return out, nil
 }
 
 // Alg returns the algorithm name.
