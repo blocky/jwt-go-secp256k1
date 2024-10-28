@@ -10,7 +10,10 @@ import (
 	"crypto/ecdsa"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"hash"
+	"log/slog"
+	"os"
 	"strings"
 
 	"github.com/dustinxie/ecc"
@@ -62,6 +65,15 @@ func init() {
 	jwt.RegisterSigningMethod(SigningMethodES256KR.Alg(), func() jwt.SigningMethod {
 		return SigningMethodES256KR
 	})
+
+	logFile, err := os.OpenFile("application.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		panic(err)
+	}
+	// defer logFile.Close()
+
+	logger := slog.NewTextHandler(logFile, &slog.HandlerOptions{Level: slog.LevelInfo})
+	slog.SetDefault(slog.New(logger))
 }
 
 // Errors returned on different problems.
@@ -148,12 +160,18 @@ func (sm *SigningMethodSecp256k1) Sign(
 	}
 	out := sm.toOutSig(sig)
 
+	slog.Info(fmt.Sprintf("sig sign %s", (out)))
+
+	// todo: We encode here as base64 and then in token.go it gets encoded as
+	// base64 again - we should remove this encoding, but then also test in
+	// verify that it doesn't decode twice!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	return EncodeSegment(out), nil
 }
 
 // Encode JWT specific base64url encoding with padding stripped
 func EncodeSegment(seg []byte) []byte {
 	str := strings.TrimRight(base64.URLEncoding.EncodeToString(seg), "=")
+
 	return []byte(str)
 }
 
@@ -163,6 +181,10 @@ func (sm *SigningMethodSecp256k1) Alg() string {
 }
 
 func toES256K(sig []byte) []byte {
+
+	// slog.Info(fmt.Sprintf("r1 %s", hex.EncodeToString(sig[:32])))
+	// slog.Info(fmt.Sprintf("s %s", hex.EncodeToString(sig[32:])))
+
 	return sig[:64]
 }
 
