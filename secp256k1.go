@@ -9,12 +9,8 @@ package secp256k1
 import (
 	"crypto/ecdsa"
 	"encoding/base64"
-	"encoding/hex"
 	"errors"
-	"fmt"
 	"hash"
-	"log/slog"
-	"os"
 	"strings"
 
 	"github.com/dustinxie/ecc"
@@ -67,14 +63,14 @@ func init() {
 		return SigningMethodES256KR
 	})
 
-	logFile, err := os.OpenFile("application.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		panic(err)
-	}
-	// defer logFile.Close()
-
-	logger := slog.NewTextHandler(logFile, &slog.HandlerOptions{Level: slog.LevelInfo})
-	slog.SetDefault(slog.New(logger))
+	// logFile, err := os.OpenFile("application.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// // defer logFile.Close()
+	//
+	// logger := slog.NewTextHandler(logFile, &slog.HandlerOptions{Level: slog.LevelInfo})
+	// slog.SetDefault(slog.New(logger))
 }
 
 // Errors returned on different problems.
@@ -153,7 +149,7 @@ func (sm *SigningMethodSecp256k1) Sign(
 	}
 	out := sm.toOutSig(sig)
 
-	slog.Info(fmt.Sprintf("sigsign %s", hex.EncodeToString(out)))
+	// slog.Info(fmt.Sprintf("sigsign %s", hex.EncodeToString(out)))
 
 	return out, nil
 }
@@ -164,10 +160,6 @@ func (sm *SigningMethodSecp256k1) Alg() string {
 }
 
 func toES256K(sig []byte) []byte {
-
-	// slog.Info(fmt.Sprintf("r1 %s", hex.EncodeToString(sig[:32])))
-	// slog.Info(fmt.Sprintf("s %s", hex.EncodeToString(sig[32:])))
-
 	return sig[:64]
 }
 
