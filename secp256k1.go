@@ -9,6 +9,7 @@ package secp256k1
 import (
 	"crypto/ecdsa"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"hash"
@@ -152,7 +153,7 @@ func (sm *SigningMethodSecp256k1) Sign(
 	}
 	out := sm.toOutSig(sig)
 
-	slog.Info(fmt.Sprintf("sig sign %s", (out)))
+	slog.Info(fmt.Sprintf("sigsign %s", hex.EncodeToString(out)))
 
 	return out, nil
 }
