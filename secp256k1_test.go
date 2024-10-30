@@ -15,7 +15,7 @@ import (
 
 func TestGeneration(t *testing.T) {
 
-	key, err := ecdsa.GenerateKey(ecc.P256k1(), rand.Reader)
+	privateKey, err := ecdsa.GenerateKey(ecc.P256k1(), rand.Reader)
 	require.NoError(t, err)
 
 	t.Run("ES256K", func(t *testing.T) {
@@ -24,7 +24,7 @@ func TestGeneration(t *testing.T) {
 			jwt.MapClaims{"iat": int64(12387687632)},
 		)
 
-		sString, err := token.SignedString(key)
+		sString, err := token.SignedString(privateKey)
 		if err != nil {
 			t.Fatalf("failed signing token: %s", err)
 		}
@@ -34,7 +34,7 @@ func TestGeneration(t *testing.T) {
 				return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 			}
 
-			return &key.PublicKey, nil
+			return &privateKey.PublicKey, nil
 		})
 
 		if err != nil {
@@ -48,7 +48,7 @@ func TestGeneration(t *testing.T) {
 			jwt.MapClaims{"iat": int64(12387687632)},
 		)
 
-		sString, err := token.SignedString(key)
+		sString, err := token.SignedString(privateKey)
 		if err != nil {
 			t.Fatalf("failed signing token: %s", err)
 		}
@@ -58,7 +58,7 @@ func TestGeneration(t *testing.T) {
 				return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 			}
 
-			return &key.PublicKey, nil
+			return &privateKey.PublicKey, nil
 		})
 
 		if err != nil {

@@ -10,16 +10,12 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"hash"
-	"log/slog"
-	"os"
 	"strings"
 
 	"github.com/dustinxie/ecc"
-	gethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/sha3"
 )
@@ -69,14 +65,14 @@ func init() {
 		return SigningMethodES256KR
 	})
 
-	logFile, err := os.OpenFile("application.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		panic(err)
-	}
-	// defer logFile.Close()
-
-	logger := slog.NewTextHandler(logFile, &slog.HandlerOptions{Level: slog.LevelInfo})
-	slog.SetDefault(slog.New(logger))
+	// logFile, err := os.OpenFile("application.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// // defer logFile.Close()
+	//
+	// logger := slog.NewTextHandler(logFile, &slog.HandlerOptions{Level: slog.LevelInfo})
+	// slog.SetDefault(slog.New(logger))
 }
 
 // Errors returned on different problems.
@@ -171,24 +167,24 @@ func (sm *SigningMethodSecp256k1) Sign(
 	}
 	out := sm.toOutSig(sig)
 
-	slog.Info(fmt.Sprintf("r    %s", hex.EncodeToString(out[:32])))
-	slog.Info(fmt.Sprintf("s    %s", hex.EncodeToString(out[32:])))
-	slog.Info(fmt.Sprintf("sum  %s", hex.EncodeToString(sum)))
+	// slog.Info(fmt.Sprintf("r    %s", hex.EncodeToString(out[:32])))
+	// slog.Info(fmt.Sprintf("s    %s", hex.EncodeToString(out[32:])))
+	// slog.Info(fmt.Sprintf("sum  %s", hex.EncodeToString(sum)))
 
-	address := gethCrypto.PubkeyToAddress(prv.PublicKey)
-	slog.Info(fmt.Sprintf("original  : %s", address.Hex()))
-
-	expandedSig := out
-	slog.Info(fmt.Sprintf("last bit  : %v", expandedSig[len(expandedSig)-1]))
-	recovered, err := gethCrypto.Ecrecover(sum, expandedSig)
-	if err != nil {
-		return nil, fmt.Errorf("recovering public key: %w", err)
-	}
-
-	var pub ecdsa.PublicKey
-	_ = UnmarshalECDSAPublicKey(recovered, &pub)
-	address = gethCrypto.PubkeyToAddress(pub)
-	slog.Info(fmt.Sprintf("recovered : %s", address.Hex()))
+	// address := gethCrypto.PubkeyToAddress(prv.PublicKey)
+	// slog.Info(fmt.Sprintf("original  : %s", address.Hex()))
+	//
+	// expandedSig := out
+	// slog.Info(fmt.Sprintf("last bit  : %v", expandedSig[len(expandedSig)-1]))
+	// recovered, err := gethCrypto.Ecrecover(sum, expandedSig)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("recovering public key: %w", err)
+	// }
+	//
+	// var pub ecdsa.PublicKey
+	// _ = UnmarshalECDSAPublicKey(recovered, &pub)
+	// address = gethCrypto.PubkeyToAddress(pub)
+	// slog.Info(fmt.Sprintf("recovered : %s", address.Hex()))
 
 	return out, nil
 }
