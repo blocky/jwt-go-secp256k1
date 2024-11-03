@@ -84,13 +84,21 @@ var (
 	ErrHashUnavailable = errors.New("hasher unavailable")
 )
 
+func (sm *SigningMethodSecp256k1) Verify(
+	signingString string,
+	signature []byte,
+	key interface{},
+) error {
+	return sm.VerifyBytes([]byte(signingString), signature, key)
+}
+
 // Verify verifies a secp256k1 signature in a JWT. The type of key has to be
 // *ecdsa.PublicKey.
 //
 // Verify it is a secp256k1 key before passing, otherwise it will validate with
 // that type of key instead. This can be done using ethereum's crypto package.
-func (sm *SigningMethodSecp256k1) Verify(
-	signingString string,
+func (sm *SigningMethodSecp256k1) VerifyBytes(
+	data []byte,
 	signature []byte,
 	key interface{},
 ) error {
@@ -100,7 +108,7 @@ func (sm *SigningMethodSecp256k1) Verify(
 	}
 
 	h := sm.newHash()
-	_, err := h.Write([]byte(signingString))
+	_, err := h.Write(data)
 	if err != nil {
 		return ErrHashUnavailable
 	}
@@ -149,13 +157,23 @@ func (sm *SigningMethodSecp256k1) Sign(
 	[]byte,
 	error,
 ) {
+	return sm.SignBytes([]byte(signingString), key)
+}
+
+func (sm *SigningMethodSecp256k1) SignBytes(
+	data []byte,
+	key interface{},
+) (
+	[]byte,
+	error,
+) {
 	prv, ok := key.(*ecdsa.PrivateKey)
 	if !ok {
 		return []byte{}, ErrWrongKeyFormat
 	}
 
 	h := sm.newHash()
-	_, err := h.Write([]byte(signingString))
+	_, err := h.Write(data)
 	if err != nil {
 		return []byte{}, ErrHashUnavailable
 	}
