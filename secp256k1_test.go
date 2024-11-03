@@ -65,5 +65,4 @@ func TestGeneration(t *testing.T) {
 			t.Fatalf("failed verifying signed token")
 		}
 	})
-
 }
